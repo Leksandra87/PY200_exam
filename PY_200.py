@@ -8,34 +8,25 @@ from itertools import count
 class IdCounter:
     """ Генератор значений id """
 
-    def __init__(self) -> None:
-        self._get_id = None
-        self.counter = count(1, 1)
-
-    @property
-    def get_id(self) -> int:
-        self.init_id()
-        return self._get_id
-
-    def init_id(self) -> None:
-        self._get_id = next(self.counter)
+    @staticmethod
+    def counter():
+        counter = count(1, 1)
+        return counter
 
 
-ID = IdCounter()  # id для продукта
-UID = IdCounter()  # id для пользователя
 PRODUCTS = 'plant_catalog.xlsx'
 
 
-class ProductGenerate:
+class ProductGenerate(IdCounter):
     """ Генерация информации о товаре """
 
-    @staticmethod
-    def generate_product():
+    def generate_product(self):
         products = openpyxl.load_workbook(PRODUCTS, read_only=True)
         page = products['Лист1']
         first_line = 5
         last_line = 84
-        product_gen = ([page[i][1].value, page[i][3].value, random.randint(2, 5)] for i in
+        id_ = self.counter()
+        product_gen = ([next(id_), page[i][1].value, page[i][3].value, random.randint(2, 5)] for i in
                        range(first_line, last_line + 1))
         for product in product_gen:
             yield product
@@ -71,23 +62,23 @@ class Password:
 class Product:
     """
     Информация о продукте
-    :param id: задается автоматически, изменить его невозможно
+    :param id_: номер продукта
     :param name: название продукта, задается только при инициализации экземпляра класса
     :param price: стоимость продукта, доступна для редактирования
     :param rating: рейтинг продукта, доступен для редактирования
     """
 
-    def __init__(self, name: str, price: float, rating: int) -> None:
+    def __init__(self, id_: int, name: str, price: float, rating: int) -> None:
         self._id = None
-        self.set_id()
+        self.set_id(id_)
         self._name = None
         self.set_name(name)
         self.price = price
         self.rating = rating
 
-    def set_id(self) -> None:
+    def set_id(self, id_: int) -> None:
         if self._id is None:
-            self._id = ID.get_id
+            self._id = id_
 
     @property
     def id(self) -> int:
@@ -164,7 +155,7 @@ class Cart:
         return f'{self.cart}'
 
 
-class User(Password, Cart):
+class User(Password, Cart, IdCounter):
     """
     Информация о покупателе
     :param id: задается автоматически, изменить его невозможно
@@ -185,7 +176,7 @@ class User(Password, Cart):
 
     def set_id(self) -> None:
         if self._id is None:
-            self._id = UID.get_id
+            self._id = self.counter()
 
     @property
     def id(self) -> int:
@@ -236,13 +227,14 @@ class Store(ProductGenerate):
         """ Выбор товаров, добавление выбранных товаров в корзину """
         print('Пожалуйста, выбирайте саженец по душе')
         product = self.generate_product()
+
         counter = 1
         pages = 8
         get = []
         while counter <= pages:
             for _ in range(10):
                 val = next(product)
-                obj = Product(val[0], val[1], val[2])
+                obj = Product(val[0], val[1], val[2], val[3])
                 get.append(obj)
                 print(obj)
             counter += 1
